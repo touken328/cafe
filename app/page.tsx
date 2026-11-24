@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+  
 import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { logout } from './login/actions'
