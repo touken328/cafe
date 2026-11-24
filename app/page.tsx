@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { logout } from './login/actions'
 
-// 쿠키를 읽는 로직을 별도 비동기 컴포넌트로 분리
+// 1. 쿠키를 읽는 로직을 독립적인 비동기 컴포넌트로 분리
 async function UserProfile() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session_user')?.value
@@ -32,22 +32,21 @@ async function UserProfile() {
   )
 }
 
+// 2. Home은 동기 함수로 유지 (async 제거, cookies 직접 호출 금지)
 export default function Home() {
   return (
     <div className="flex h-full flex-col bg-gray-50">
-      {/* 상단 네비게이션 헤더 */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-3 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-lg font-bold text-blue-600">📚 도검난무 커뮤니티 위키</span>
         </div>
 
-        {/* 동적 데이터를 사용하는 부분을 Suspense로 감싸서 스트리밍 처리 */}
+        {/* 3. 동적 컴포넌트를 Suspense로 감싸기 */}
         <Suspense fallback={<div className="h-10 w-24 animate-pulse rounded bg-gray-100"></div>}>
           <UserProfile />
         </Suspense>
       </header>
 
-      {/* main이 남은 공간을 꽉 채웁니다. */}
       <main className="flex flex-1 flex-col p-3 overflow-hidden">
         <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <iframe 
