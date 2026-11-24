@@ -1,11 +1,8 @@
-export const dynamic = 'force-dynamic'
-export const fetchCache = 'force-no-store'
-  
 import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { logout } from './login/actions'
 
-// 💡 쿠키를 읽는 로직을 별도 컴포넌트로 분리합니다.
+// 쿠키를 읽는 로직을 별도 비동기 컴포넌트로 분리
 async function UserProfile() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session_user')?.value
@@ -44,7 +41,7 @@ export default function Home() {
           <span className="text-lg font-bold text-blue-600">📚 도검난무 커뮤니티 위키</span>
         </div>
 
-        {/* 💡 동적 데이터를 사용하는 부분을 Suspense로 감싸줍니다. */}
+        {/* 동적 데이터를 사용하는 부분을 Suspense로 감싸서 스트리밍 처리 */}
         <Suspense fallback={<div className="h-10 w-24 animate-pulse rounded bg-gray-100"></div>}>
           <UserProfile />
         </Suspense>
