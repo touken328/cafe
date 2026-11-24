@@ -503,7 +503,7 @@ body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--color-b
 }
 .page-btn:hover {
     background: var(--color-blue-bg);
-    border-color: var(--color-menu-hover);
+    border-color: var(--color-blue-border);
 }
 .page-btn.active {
     background: var(--color-menu-bg);
