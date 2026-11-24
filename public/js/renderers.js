@@ -533,10 +533,16 @@ function renderProfileStoryTab(post) {
     `;
 }
 // ---- 카드 그리드 (리스트용) ----
-function buildCardGrid(posts) {
+function buildCardGrid(posts, containerId = 'card-grid-container') {
     if (posts.length === 0) return `<div class="no-data">등록된 게시물이 없습니다.</div>`;
-    let html = `<div class="card-grid">`;
-    posts.forEach(post => {
+    
+    // 초기에는 30개만 렌더링
+    const INITIAL_COUNT = 30;
+    const initialPosts = posts.slice(0, INITIAL_COUNT);
+    
+    let html = `<div class="card-grid" id="${containerId}">`;
+    initialPosts.forEach(post => {
+        // 기존 카드 생성 로직과 동일 (이미지 lazy loading 포함)
         const imgUrl = normalizeImageUrl(post.image);
         const imageHtml = imgUrl
             ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(post.name)}" class="card-image" loading="lazy" onerror="this.outerHTML='<div class=\\'card-image\\'>이미지 로드 실패</div>'">`
@@ -551,6 +557,36 @@ function buildCardGrid(posts) {
             </div></div>`;
     });
     html += `</div>`;
+    
+    // ★ 나머지 데이터를 추가로 그리는 함수 (스크롤 감지용)
+    setTimeout(() => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        let currentIndex = INITIAL_COUNT;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && currentIndex < posts.length) {
+                // 30개씩 추가 렌더링
+                const nextPosts = posts.slice(currentIndex, currentIndex + 30);
+                let nextHtml = '';
+                nextPosts.forEach(post => {
+                     // 동일한 카드 생성 로직 ...
+                     const imgUrl = normalizeImageUrl(post.image);
+                     const imageHtml = imgUrl ? `<img src="${escapeHtml(imgUrl)}" class="card-image" loading="lazy">` : `<div class="card-image">이미지 없음</div>`;
+                     nextHtml += `<div class="card" onclick="renderDetailView(${Number(post.id)})">${imageHtml}...</div>`;
+                });
+                container.insertAdjacentHTML('beforeend', nextHtml);
+                currentIndex += 30;
+            }
+        }, { rootMargin: '200px' }); // 바닥에서 200px 남았을 때 미리 로드
+
+        // 컨테이너 하단에 감지용 요소 추가
+        const sentinel = document.createElement('div');
+        sentinel.id = 'scroll-sentinel';
+        container.after(sentinel);
+        observer.observe(sentinel);
+    }, 100);
+
     return html;
 }
 // ==========================================
