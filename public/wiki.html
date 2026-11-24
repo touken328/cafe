@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도검난무 Wiki</title>
+    <!-- 마크다운 렌더링을 위한 Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- ★ Supabase JS SDK 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wiki-container">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content" id="mainContent">
+			<div class="default-view" id="defaultView" style="display: none;">
+                    <span>내용</span>
+            </div>
+        </main>
+    </div>
+
+    <div class="footer-toolbar">
+        <button id="btn-new-post">+ 새글쓰기</button>
+		<button id="btn-convert-tool">대사변환</button>
+		<button id="btn-textvs-tool">문자대조</button>
+        <button id="themeToggleBtn">다크모드</button>
+        <button id="btn-json-backup">JSON백업</button>
+        <input type="file" id="jsonUpload" class="hidden-input" multiple accept=".json">
+        <button onclick="document.getElementById('jsonUpload').click()">JSON복원</button>
+		<button id="btn-reset-all" style="color: var(--color-red);">리셋</button>
+    </div>
+
+<script src="js/utils.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/schema_inner.js"></script>
+<script src="js/schema_story.js"></script>
+<script src="js/schema_info.js"></script>
+<script src="js/menuRegistry.js"></script>
+<script src="js/renderers.js"></script>
+<script src="js/renderers_inner.js"></script>
+<script src="js/renderers_story.js"></script>
+<script src="js/renderers_info.js"></script>
+<script src="js/list.js"></script>
+<script src="js/write.js"></script>
+<script src="js/write_inner.js"></script>
+<script src="js/write_story.js"></script>
+<script src="js/write_info.js"></script>
+<script src="js/db_backup.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+</body>
+</html>

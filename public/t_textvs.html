@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>텍스트 대조 편집기</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--color-menu-bg);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .item-label {
+      padding: 10px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 16px;
+      border: none;
+      resize: vertical;
+      outline: none;
+    }
+
+    .result-box {
+      width: 100%;
+      min-height: 300px;
+      max-height: 500px;
+      padding: 16px;
+      resize: vertical;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* 삭제된 글자 (왼쪽 - 파란색) */
+    .del {
+      color: var(--color-blue-text);
+      background-color: var(--color-blue-bg);
+      font-weight: 500;
+      padding: 0px;
+    }
+
+    /* 추가된 글자 (오른쪽 - 빨간색) */
+    .ins {
+      color: var(--color-red);
+      background-color: var(--color-pink-bg);
+      font-weight: 500;
+      padding: 0px;
+    }
+
+    .stats {
+      font-size: 0.85rem;
+      color: var(--color-menu-bg);
+      margin-bottom: 12px;
+    }
+    .controls { margin: 10px 0; display: flex; gap: 10px; align-items: center; }
+  </style>
+</head>
+<body style="background:var(--color-white);">
+
+  <header>
+    <div class="no-data">🔍 텍스트 대조 편집기 (글자·기호 단위)</div>
+    <div class="controls">
+      <button class="detail-tab-btn" onclick="resetAll()">초기화</button>
+      <button class="detail-tab-btn active" onclick="compareTexts()">대조하기</button>
+    </div>
+  </header>
+
+  <!-- 입력 영역 -->
+  <div class="editor-grid">
+    <div class="panel">
+      <div class="item-label">
+        <span>원문 (Original)</span>
+        <span class="del">삭제된 글자 = 파란색</span>
+      </div>
+      <textarea id="leftInput" placeholder="원문을 입력하세요"></textarea>
+    </div>
+    <div class="panel">
+      <div class="item-label">
+        <span>변경문 (Modified)</span>
+        <span class="ins">추가된 글자 = 빨간색</span>
+      </div>
+      <textarea id="rightInput" placeholder="대조할 변경문을 입력하세요"></textarea>
+    </div>
+  </div>
+
+  <!-- 결과 영역 -->
+  <div class="stats" id="statsArea">대조 버튼을 클릭하면 빈 줄을 제외한 모든 글자와 기호의 변경 내역이 아래에 표시됩니다.</div>
+  <div class="editor-grid">
+    <div class="panel">
+      <div class="item-label">원문 대조 결과</div>
+      <div class="result-box" id="leftResult"></div>
+    </div>
+    <div class="panel">
+      <div class="item-label">변경문 대조 결과</div>
+      <div class="result-box" id="rightResult"></div>
+    </div>
+  </div>
+
+  <script>
+    // HTML 특수문자 이스케이프 (기호 깨짐 및 XSS 방지)
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // 빈 줄(엔터만 있는 줄) 제거 전처리
+    function removeEmptyLines(text) {
+      return text
+        .split(/\r?\n/)
+        .filter(line => line.trim() !== '')
+        .join('\n');
+    }
+
+    // LCS(최장 공통 부분 수열) 기반 문자/기호 단위 Diff 알고리즘
+    function computeCharDiff(str1, str2) {
+      // 이모지나 특수 유니코드 기호도 온전히 1글자로 분리하기 위해 Array.from 사용
+      const arr1 = Array.from(str1);
+      const arr2 = Array.from(str2);
+      const m = arr1.length;
+      const n = arr2.length;
+
+      // DP 테이블 초기화
+      const dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (arr1[i - 1] === arr2[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+          }
+        }
+      }
+
+      // 역추적 (Backtracking)
+      let i = m, j = n;
+      const diffs = [];
+
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && arr1[i - 1] === arr2[j - 1]) {
+          diffs.push({ type: 'equal', char: arr1[i - 1] });
+          i--;
+          j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+          diffs.push({ type: 'ins', char: arr2[j - 1] });
+          j--;
+        } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+          diffs.push({ type: 'del', char: arr1[i - 1] });
+          i--;
+        }
+      }
+
+      return diffs.reverse();
+    }
+
+    function compareTexts() {
+      const rawLeft = document.getElementById('leftInput').value;
+      const rawRight = document.getElementById('rightInput').value;
+
+      // 1. 빈 줄(엔터) 제거
+      const cleanLeft = removeEmptyLines(rawLeft);
+      const cleanRight = removeEmptyLines(rawRight);
+
+      // 2. 차이 계산
+      const diffs = computeCharDiff(cleanLeft, cleanRight);
+
+      let leftHtml = '';
+      let rightHtml = '';
+      let delCount = 0;
+      let insCount = 0;
+
+      // 3. 결과 렌더링 (엔터 문자는 하이라이트에서 제외하고 줄바꿈으로만 표현)
+      diffs.forEach(part => {
+        if (part.char === '\n') {
+          if (part.type === 'equal' || part.type === 'del') leftHtml += '<br>';
+          if (part.type === 'equal' || part.type === 'ins') rightHtml += '<br>';
+          return;
+        }
+
+        const safeChar = escapeHtml(part.char);
+
+        if (part.type === 'equal') {
+          leftHtml += safeChar;
+          rightHtml += safeChar;
+        } else if (part.type === 'del') {
+          leftHtml += `<span class="del">${safeChar}</span>`;
+          delCount++;
+        } else if (part.type === 'ins') {
+          rightHtml += `<span class="ins">${safeChar}</span>`;
+          insCount++;
+        }
+      });
+
+      document.getElementById('leftResult').innerHTML = leftHtml || '<span style="color:#adb5bd">내용 없음</span>';
+      document.getElementById('rightResult').innerHTML = rightHtml || '<span style="color:#adb5bd">내용 없음</span>';
+      document.getElementById('statsArea').innerHTML = 
+        `대조 완료: 삭제된 문자/기호 <strong style="color:var(--color-blue-text)">${delCount}개</strong>, 추가된 문자/기호 <strong style="color:var(--color-red)">${insCount}개</strong>`;
+    }
+
+    function resetAll() {
+      document.getElementById('leftInput').value = '';
+      document.getElementById('rightInput').value = '';
+      document.getElementById('leftResult').innerHTML = '';
+      document.getElementById('rightResult').innerHTML = '';
+      document.getElementById('statsArea').innerText = '초기화되었습니다.';
+    }
+  </script>
+</body>
+</html>
