@@ -47,8 +47,14 @@ export default function Home() {
         </Suspense>
       </header>
 
-      <main className="flex flex-1 flex-col p-3 overflow-hidden">
-        <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* main이 남은 공간을 꽉 채웁니다. */}
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {/* 
+          - 테두리(border), 둥글기(rounded-xl), 그림자(shadow-sm) 제거
+          - 패딩(p-3) 제거
+          - iframe이 화면에 꽉 차도록 설정
+        */}
+        <div className="w-full h-full flex flex-col bg-white overflow-hidden">
           <iframe 
             src="/wiki.html" 
             className="w-full h-full border-0"
