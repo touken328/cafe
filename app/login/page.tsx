@@ -54,16 +54,14 @@ export default function LoginPage() {
         router.refresh()
 
       } else if (mode === 'signup') {
-        // 1. 영문 ID 중복 확인
-        const cleanUsername = username.trim()
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', cleanUsername)
-          .single()
-
-        if (existingUser) {
-          throw new Error('이미 사용 중인 영문 아이디입니다.')
+// 3. profiles 테이블에 영문 ID와 이메일 저장 (이미 트리거로 생성된 행이 있으면 업데이트)
+        if (authData.user) {
+          const { error: profileError } = await supabase.from('profiles').upsert({
+            id: authData.user.id,
+            username: cleanUsername,
+            email: email.trim(),
+          })
+          if (profileError) throw profileError
         }
 
         // 2. Supabase Auth 계정 생성
