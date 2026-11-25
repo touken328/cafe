@@ -1,26 +1,43 @@
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 import { Suspense } from 'react'
-import { logout } from './login/actions'
+import Link from 'next/link'
 
-// 1. 쿠키를 읽는 로직을 독립적인 비동기 컴포넌트로 분리
+// 1. Supabase 세션 및 profiles 테이블에서 사용자 정보를 불러오는 컴포넌트
 async function UserProfile() {
-  const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session_user')?.value
-  const user = sessionCookie ? JSON.parse(sessionCookie) : null
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return null
+  // 로그인하지 않은 경우 로그인/회원가입 버튼 노출
+  if (!user) {
+    return (
+      <div className="flex items-center gap-3">
+        <Link
+          href="/login"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+        >
+          로그인 / 회원가입
+        </Link>
+      </div>
+    )
+  }
+
+  // profiles 테이블에서 영문 아이디(username) 조회
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)
+    .single()
+
+  const username = profile?.username || '멤버'
 
   return (
     <div className="flex items-center gap-4">
       <div className="text-right">
         <p className="text-sm font-semibold text-gray-900">
-          {user.username} 님
-        </p>
-        <p className="text-xs text-gray-500 uppercase">
-          권한: {user.role}
+          {username} 님
         </p>
       </div>
-      <form action={logout}>
+      <form action="/auth/signout" method="POST">
         <button
           type="submit"
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
@@ -32,29 +49,24 @@ async function UserProfile() {
   )
 }
 
-// 2. Home은 동기 함수로 유지 (async 제거, cookies 직접 호출 금지)
+// 2. 메인 페이지 컴포넌트
 export default function Home() {
   return (
-    <div className="flex h-full flex-col bg-gray-50">
+    <div className="flex h-full flex-col bg-gray-50 min-h-screen">
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-3 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-lg font-bold text-blue-600">📚 도검난무 커뮤니티 위키</span>
         </div>
 
-        {/* 3. 동적 컴포넌트를 Suspense로 감싸기 */}
+        {/* 3. 비동기 사용자 프로필 컴포넌트를 Suspense로 감싸기 */}
         <Suspense fallback={<div className="h-10 w-24 animate-pulse rounded bg-gray-100"></div>}>
           <UserProfile />
         </Suspense>
       </header>
 
-      {/* main이 남은 공간을 꽉 채웁니다. */}
+      {/* 메인 콘텐츠 영역 (위키 iframe) */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {/* 
-          - 테두리(border), 둥글기(rounded-xl), 그림자(shadow-sm) 제거
-          - 패딩(p-3) 제거
-          - iframe이 화면에 꽉 차도록 설정
-        */}
-        <div className="w-full h-full flex flex-col bg-white overflow-hidden">
+        <div className="w-full h-[calc(100vh-65px)] flex flex-col bg-white overflow-hidden">
           <iframe 
             src="/wiki.html" 
             className="w-full h-full border-0"
