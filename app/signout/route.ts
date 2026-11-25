@@ -1,0 +1,14 @@
+import { createClient } from '@/utils/supabase/server'
+import { NextResponse } from 'next/server'
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  
+  // Supabase 세션 종료
+  await supabase.auth.signOut()
+
+  const url = new URL(request.url)
+  return NextResponse.redirect(new URL('/login', url.origin), {
+    status: 302,
+  })
+}
