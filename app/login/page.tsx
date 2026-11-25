@@ -51,7 +51,10 @@ export default function LoginPage() {
           email: profile.email,
           password,
         })
-        if (loginErr) throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.')
+        
+        if (loginErr) {
+          throw new Error(`로그인 실패: ${loginErr.message}`)
+        }
 
         router.push('/')
         router.refresh()
@@ -59,6 +62,10 @@ export default function LoginPage() {
       } else if (mode === 'signup') {
         const cleanUsername = username.trim()
         const cleanEmail = email.trim()
+
+        if (!cleanUsername || !cleanEmail || !password) {
+          throw new Error('모든 필드를 입력해 주세요.')
+        }
 
         // 1. 영문 ID 중복 확인
         const { data: existingUser } = await supabase
@@ -71,7 +78,7 @@ export default function LoginPage() {
           throw new Error('이미 사용 중인 영문 아이디입니다.')
         }
 
-        // 2. Supabase Auth 계정 생성
+        // 2. Supabase Auth 계정 생성 (이메일 인증 꺼져있다면 즉시 가입 완료)
         const { data: authData, error: signUpErr } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
@@ -79,9 +86,10 @@ export default function LoginPage() {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         })
+        
         if (signUpErr) throw signUpErr
 
-        // 3. profiles 테이블에 영문 ID와 이메일 저장 (upsert로 충돌 방지)
+        // 3. profiles 테이블에 영문 ID와 이메일 저장 (upsert)
         if (authData.user) {
           const { error: upsertErr } = await supabase.from('profiles').upsert({
             id: authData.user.id,
@@ -91,13 +99,12 @@ export default function LoginPage() {
           if (upsertErr) throw upsertErr
         }
 
-        setMessage('회원가입이 완료되었습니다! 이제 영문 ID로 로그인할 수 있습니다.')
+        setMessage('회원가입이 완료되었습니다! 이제 로그인해 주세요.')
         setMode('login')
 
       } else if (mode === 'find-id') {
         const cleanEmail = email.trim()
 
-        // 이메일로 영문 ID 조회
         const { data: profile, error: findErr } = await supabase
           .from('profiles')
           .select('username')
@@ -114,7 +121,6 @@ export default function LoginPage() {
       } else if (mode === 'forgot-pw') {
         const cleanEmail = email.trim()
 
-        // 이메일로 비밀번호 재설정 링크 발송
         const { error: resetErr } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
         })
@@ -141,7 +147,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-2">
             {mode === 'login' && '영문 아이디와 비밀번호를 입력해 주세요.'}
-            {mode === 'signup' && '사용할 영문 아이디와 이메일을 등록해 주세요.'}
+            {mode === 'signup' && '사용할 영문 아이디, 이메일, 비밀번호를 입력해 주세요.'}
             {mode === 'find-id' && '가입 시 등록한 이메일을 입력하면 아이디를 알려드립니다.'}
             {mode === 'forgot-pw' && '가입한 이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다.'}
           </p>
@@ -159,6 +165,7 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 영문 아이디 입력: 로그인 또는 회원가입 시 */}
           {(mode === 'login' || mode === 'signup') && (
             <div>
               <label className="block text-sm font-medium text-gray-700">영문 아이디</label>
@@ -173,6 +180,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* 이메일 입력: 회원가입, 아이디 찾기, 비밀번호 찾기 시 */}
           {mode !== 'login' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">이메일</label>
@@ -187,6 +195,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* 비밀번호 입력: 로그인 또는 회원가입 시 */}
           {(mode === 'login' || mode === 'signup') && (
             <div>
               <label className="block text-sm font-medium text-gray-700">비밀번호</label>
