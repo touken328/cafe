@@ -12,7 +12,7 @@ function renderStoryFieldInput(field, value, allValues = {}) {
     switch (field.type) {
         case 'textarea':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${v}</textarea></div>`;
+                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${escapeHtml(v)}</textarea></div>`;
         case 'select': {
             // ★ 동적 옵션: 대분류에 따라 소분류 옵션 변경
             let options = field.options || [];
@@ -31,7 +31,7 @@ function renderStoryFieldInput(field, value, allValues = {}) {
                     return `<button type="button" 
                                 class="radio-btn ${isActive ? 'active' : ''}" 
                                 data-value="${escapeHtml(o)}" 
-                                onclick="selectRadioBtn(this, '${inputId}', '${escapeHtml(o).replace(/'/g, "\\'")}')"
+                                onclick="selectRadioBtn(this, '${inputId}', ${jsArg(o)})"
                                 style="padding: 8px 20px; border: 1px solid ${isActive ? '#6b9bd2' : '#ccc'}; 
                                        background: ${isActive ? '#6b9bd2' : '#fff'}; 
                                        color: ${isActive ? '#fff' : '#333'}; 

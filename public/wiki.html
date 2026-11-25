@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-role="guest">
     <div class="wiki-container">
         <aside class="sidebar" id="sidebar"></aside>
         <main class="main-content" id="mainContent">
@@ -21,14 +21,14 @@
     </div>
 
     <div class="footer-toolbar">
-        <button id="btn-new-post">+ 새글쓰기</button>
+        <button id="btn-new-post" class="needs-write">+ 새글쓰기</button>
 		<button id="btn-convert-tool">대사변환</button>
 		<button id="btn-textvs-tool">문자대조</button>
         <button id="themeToggleBtn">다크모드</button>
         <button id="btn-json-backup">JSON백업</button>
         <input type="file" id="jsonUpload" class="hidden-input" multiple accept=".json">
-        <button onclick="document.getElementById('jsonUpload').click()">JSON복원</button>
-		<button id="btn-reset-all" style="color: var(--color-red);">리셋</button>
+        <button class="needs-write" onclick="document.getElementById('jsonUpload').click()">JSON복원</button>
+		<button id="btn-reset-all" class="needs-admin" style="color: var(--color-red);">리셋</button>
     </div>
 
 <script src="js/utils.js"></script>

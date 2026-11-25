@@ -503,7 +503,7 @@ body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--color-b
 }
 .page-btn:hover {
     background: var(--color-blue-bg);
-    border-color: var(--color-blue-border);
+    border-color: var(--color-menu-hover);
 }
 .page-btn.active {
     background: var(--color-menu-bg);
@@ -623,4 +623,23 @@ body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--color-b
 /* 각 섹션: 스크롤 이동 시 상단 sticky 탭에 가리지 않도록 여백 */
 .write-section {
     scroll-margin-top: 80px;   /* sticky 탭 높이만큼 보정 */
+}
+
+/* ==========================================
+   ★ 권한별 UI 표시 (보이기/숨기기용)
+   실제 권한은 Supabase RLS가 DB에서 강제한다.
+   wiki.html 의 body[data-role] 일 때만 적용 (t_convert 등 다른 페이지에는 영향 없음)
+   ========================================== */
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .needs-write,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-new-post-inline,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-inner-new,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-flashback-new,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-story-new,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-edit,
+body[data-role]:not([data-role="editor"]):not([data-role="admin"]) .btn-copy {
+    display: none !important;
+}
+body[data-role]:not([data-role="admin"]) .needs-admin,
+body[data-role]:not([data-role="admin"]) .btn-delete {
+    display: none !important;
 }

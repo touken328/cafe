@@ -12,7 +12,7 @@ function renderInfoFieldInput(field, value) {
     switch (field.type) {
         case 'textarea':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${v}</textarea></div>`;
+                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${escapeHtml(v)}</textarea></div>`;
         case 'select': {
             if (field.buttonGroup) {
                 const defaultVal = (v === undefined || v === null || v === '')
@@ -21,7 +21,7 @@ function renderInfoFieldInput(field, value) {
                     const isActive = o === defaultVal;
                     return `<button type="button" class="radio-btn ${isActive ? 'active' : ''}"
                                 data-value="${escapeHtml(o)}"
-                                onclick="selectRadioBtn(this, '${inputId}', '${escapeHtml(o).replace(/'/g, "\\'")}')"
+                                onclick="selectRadioBtn(this, '${inputId}', ${jsArg(o)})"
                                 style="padding:8px 20px;border:1px solid ${isActive ? '#6b9bd2' : '#ccc'};
                                        background:${isActive ? '#6b9bd2' : '#fff'};
                                        color:${isActive ? '#fff' : '#333'};

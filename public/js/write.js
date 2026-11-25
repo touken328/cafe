@@ -14,6 +14,7 @@ function toggleOuterBookmark(id) {
 // write.js : 글쓰기/수정/복사 오케스트레이션
 // ==========================================
 function openWriteView(post = null, isCopy = false, presetCategory = null) {
+    if (!requireWriter()) return;
     const isEdit = post !== null && !isCopy;
     // ★ presetCategory가 있으면 카테고리 선택 단계를 건너뜀
     const hasPreset = !isEdit && !isCopy && !!presetCategory;
@@ -45,8 +46,8 @@ function openWriteView(post = null, isCopy = false, presetCategory = null) {
             </div>
             <div id="step-form" style="display:${showForm ? 'block' : 'none'};">
                 <form id="writeForm">
-                    <input type="hidden" id="inputCategory" value="${post?.category || presetCategory || ''}">
-                    <input type="hidden" id="inputPostId" value="${isEdit ? post.id : ''}">
+                    <input type="hidden" id="inputCategory" value="${escapeHtml(post?.category || presetCategory || '')}">
+                    <input type="hidden" id="inputPostId" value="${escapeHtml(isEdit ? post.id : '')}">
                     ${formHTML}
                     <div class="form-actions">
                         <button type="button" class="btn-cancel" id="btn-back-category" style="display:${isEdit || isCopy || hasPreset ? 'none' : 'inline-block'};">이전</button>

@@ -12,7 +12,7 @@ function renderFlashbackFieldInput(field, value) {
     switch (field.type) {
         case 'textarea':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${v}</textarea></div>`;
+                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${escapeHtml(v)}</textarea></div>`;
         case 'select': {
             const defaultVal = (v === undefined || v === null || v === '') ? field.options[0] : v;
             const opts = field.options.map(o => `<option value="${o}" ${o === defaultVal ? 'selected' : ''}>${o}</option>`).join('');
@@ -23,7 +23,7 @@ function renderFlashbackFieldInput(field, value) {
         case 'tags':
         default:
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <input type="text" id="${inputId}" class="form-control" value="${v}" ${ph}></div>`;
+                <input type="text" id="${inputId}" class="form-control" value="${escapeHtml(v)}" ${ph}></div>`;
     }
 }
 
@@ -72,11 +72,10 @@ function renderFlashbackDetail(post) {
 }).join('');
 
     const imgSrc = normalizeImageUrl(post.image);
-    const safeImg = escapeHtml(imgSrc).replace(/'/g, "\\'");
     const imageHtml = imgSrc
         ? `<div style="text-align:center;">
              <img src="${escapeHtml(imgSrc)}" alt="회상 이미지" style="max-width:100%; cursor:zoom-in;" 
-                  onclick="openLightbox('${safeImg}')"
+                  onclick="openLightbox(${jsArg(imgSrc)})"
                   onerror="this.outerHTML='<div style=\\'color:#888;\\'>이미지 로드 실패</div>'">
            </div>`
         : `<div style="color:#888;">이미지 없음</div>`;
@@ -150,7 +149,7 @@ function renderInnerFieldInput(field, value) {
     switch (field.type) {
         case 'textarea':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${v}</textarea></div>`;
+                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${escapeHtml(v)}</textarea></div>`;
         case 'select': {
             // ★ buttonGroup: true 이면 버튼 그룹으로 렌더링
             if (field.buttonGroup) {
@@ -172,7 +171,7 @@ function renderInnerFieldInput(field, value) {
                 }).join(' ');
                 return `<div class="form-group"><label>${field.label}${req}</label>
                     <div style="display: flex; gap: 8px; flex: 1; flex-wrap: wrap;">
-                        <input type="hidden" id="${inputId}" value="${defaultVal}">
+                        <input type="hidden" id="${inputId}" value="${escapeHtml(defaultVal)}">
                         ${btns}
                     </div></div>`;
             }
@@ -187,7 +186,7 @@ function renderInnerFieldInput(field, value) {
         case 'tags':
         default:
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <input type="text" id="${inputId}" class="form-control" value="${v}" ${ph}></div>`;
+                <input type="text" id="${inputId}" class="form-control" value="${escapeHtml(v)}" ${ph}></div>`;
     }
 }
 
@@ -244,18 +243,16 @@ function renderInnerDetail(post) {
     if (img1 || img2) {
         imagesHtml = `<div style="display: flex; gap: 10px; flex-wrap: wrap;">`;
         if (img1) {
-            const safeImg1 = escapeHtml(img1).replace(/'/g, "\\'");
             imagesHtml += `<img src="${escapeHtml(img1)}" alt="이미지1" 
                 style="max-width: calc(50% - 5px); border-radius: 8px;" 
                 onerror="this.outerHTML='<div style=\\'color:#888;padding:20px;\\'>이미지1 로드 실패</div>'"
-                onclick="openLightbox('${safeImg1}')">`;
+                onclick="openLightbox(${jsArg(img1)})">`;
         }
         if (img2) {
-            const safeImg2 = escapeHtml(img2).replace(/'/g, "\\'");
             imagesHtml += `<img src="${escapeHtml(img2)}" alt="이미지2" 
                 style="max-width: calc(50% - 5px); border-radius: 8px;" 
                 onerror="this.outerHTML='<div style=\\'color:#888;padding:20px;\\'>이미지2 로드 실패</div>'"
-                onclick="openLightbox('${safeImg2}')">`;
+                onclick="openLightbox(${jsArg(img2)})">`;
         }
         imagesHtml += `</div>`;
     }

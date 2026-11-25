@@ -20,6 +20,7 @@ function saveStoryPosts(posts) {
 }
 
 function openStoryWriteView(post = null, isCopy = false) {
+    if (!requireWriter()) return;
     const isEdit = post !== null && !isCopy;
     const title = isEdit ? '스토리 수정' : (isCopy ? '스토리 복사' : '스토리 새글쓰기');
     const formHTML = renderStoryWriteFormHTML(post, isCopy);

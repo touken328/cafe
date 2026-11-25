@@ -28,7 +28,7 @@ if (field.type === 'stats') {
         return `
             <div class="status-item">
                 <label>${sf.label}</label>
-                <input type="text" id="stat_${sf.key}" class="form-control" value="${safeVal}">
+                <input type="text" id="stat_${sf.key}" class="form-control" value="${escapeHtml(safeVal)}">
             </div>
         `;
     }).join('');
@@ -40,7 +40,7 @@ if (field.type === 'stats') {
     switch (field.type) {
         case 'textarea':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${v}</textarea></div>`;
+                <textarea id="${inputId}" class="form-control" rows="${field.rows || 4}" ${ph}>${escapeHtml(v)}</textarea></div>`;
         case 'select': {
     // ★ buttonGroup: true 이면 버튼 그룹으로 렌더링
     if (field.buttonGroup) {
@@ -62,7 +62,7 @@ if (field.type === 'stats') {
         }).join(' ');
         return `<div class="form-group"><label>${field.label}${req}</label>
             <div style="display: flex; gap: 8px; flex: 1;">
-                <input type="hidden" id="${inputId}" value="${defaultVal}">
+                <input type="hidden" id="${inputId}" value="${escapeHtml(defaultVal)}">
                 ${btns}
             </div></div>`;
     }
@@ -81,10 +81,10 @@ if (field.type === 'stats') {
 }
         case 'number':
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <input type="number" id="${inputId}" class="form-control" value="${v}" ${ph}></div>`;
+                <input type="number" id="${inputId}" class="form-control" value="${escapeHtml(v)}" ${ph}></div>`;
         default:
             return `<div class="form-group"><label>${field.label}${req}</label>
-                <input type="text" id="${inputId}" class="form-control" value="${v}" ${ph}></div>`;
+                <input type="text" id="${inputId}" class="form-control" value="${escapeHtml(v)}" ${ph}></div>`;
     }
 }
 
@@ -286,7 +286,7 @@ return group.fields
     })
     .map(field => {
         const value = getByPath(post, field.key);
-        const content = field.markdown ? renderMarkdown(value) : value;
+        const content = field.markdown ? renderMarkdown(value) : escapeHtml(String(value));
         return `<div class="detail-section">
             <div class="detail-section-title">${field.label}</div>
             <div class="detail-section-content">${content}</div>
@@ -321,10 +321,9 @@ const infoGridHtml = topFields.map(f => {
     
     // ★ art만 클릭 가능 (safe escape)
     if (CLICKABLE_FIELDS.includes(f.key) && raw && String(raw).trim() !== '' && String(raw).trim() !== '-') {
-        const safeRaw = String(raw).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `<div class="label">${escapeHtml(f.label)}</div>
                 <div class="value"><span class="tag tag-gray" style="cursor:pointer;" 
-                     onclick="renderTagPostList('${safeRaw}')">${escapeHtml(display)}</span></div>`;
+                     onclick="renderTagPostList(${jsArg(raw)})">${escapeHtml(display)}</span></div>`;
     }
     return `<div class="label">${escapeHtml(f.label)}</div><div class="value">${escapeHtml(display)}</div>`;
 }).join('');
@@ -350,9 +349,9 @@ const subFields = (statsField && Array.isArray(statsField.subFields) && statsFie
 const statLabel = (statsField && statsField.label) ? statsField.label : '스테이터스';
 
 const row1Headers = subFields.slice(0, 4).map(x => `<th>${escapeHtml(x.label)}</th>`).join('');
-const row1Values  = subFields.slice(0, 4).map(x => `<td>${statVal(stats[x.key])}</td>`).join('');
+const row1Values  = subFields.slice(0, 4).map(x => `<td>${escapeHtml(String(statVal(stats[x.key])))}</td>`).join('');
 const row2Headers = subFields.slice(4, 8).map(x => `<th>${escapeHtml(x.label)}</th>`).join('');
-const row2Values  = subFields.slice(4, 8).map(x => `<td>${statVal(stats[x.key])}</td>`).join('');
+const row2Values  = subFields.slice(4, 8).map(x => `<td>${escapeHtml(String(statVal(stats[x.key])))}</td>`).join('');
 
 statsHtml = `
     <span class="status-title">${statLabel} (최대치)</span>
@@ -381,7 +380,7 @@ const sectionsHtml = sectionFields
     })
     .map(f => {
         const raw = getByPath(post, f.key);
-        const content = f.markdown ? renderMarkdown(raw) : raw;
+        const content = f.markdown ? renderMarkdown(raw) : escapeHtml(String(raw));
         return `<div class="detail-section">
 <div class="detail-section-title">${escapeHtml(f.label)}</div>
 <div class="detail-section-content">${content}</div>
@@ -391,7 +390,7 @@ const sectionsHtml = sectionFields
     // ★ 도종 기반 자동 필드 (범위, 장비) — 스키마에 없지만 유지
     const slotHtml = (post.slot && String(post.slot).trim() !== '' && String(post.slot).trim() !== '-')
     ? `<span class="tag tag-null" style="cursor:pointer;" 
-         onclick="renderTagPostList('${String(post.slot).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">${escapeHtml(post.slot)}</span>`
+         onclick="renderTagPostList(${jsArg(post.slot)})">${escapeHtml(post.slot)}</span>`
     : '-';
 
 const rangeExtraHtml = `
@@ -434,12 +433,11 @@ function renderIllustTab(post) {
     imgList.forEach(item => {
         const url = normalizeImageUrl(imgs[item.key]);
         if (url) {
-            const safeUrl = escapeHtml(url).replace(/'/g, "\\'");
             html += `
                 <div class="img-frame"><div class="illust-card">
                     <div class="item-label">${escapeHtml(item.label)}</div>
                     <img src="${escapeHtml(url)}" style="width:100%;height:auto;display:block;" 
-                         onclick="openLightbox('${safeUrl}')"
+                         onclick="openLightbox(${jsArg(url)})"
                          onerror="this.outerHTML='<div style=\\'padding:20px;text-align:center;color:#888;\\'>이미지 로드 실패</div>'">
                 </div></div>`;
         }
@@ -465,7 +463,7 @@ function renderProfileInnerTab(post) {
         .filter(ip => (ip.swordNumbers || []).some(n => String(n).trim() === myNum));
 
     if (innerPosts.length === 0) {
-        return `<div class="no-data">이 도검남사(번호 ${myNum})가 포함된 내번 글이 없습니다.</div>`;
+        return `<div class="no-data">이 도검남사(번호 ${escapeHtml(myNum)})가 포함된 내번 글이 없습니다.</div>`;
     }
 
     // ★ 내번 카드 그리드 (buildInnerCardGrid 재사용)
@@ -492,7 +490,7 @@ function renderProfileFlashbackTab(post) {
         .filter(fp => (fp.swordNumbers || []).some(n => String(n).trim() === myNum));
 
     if (flashbackPosts.length === 0) {
-        return `<div class="no-data">이 도검남사(번호 ${myNum})가 포함된 회상 글이 없습니다.</div>`;
+        return `<div class="no-data">이 도검남사(번호 ${escapeHtml(myNum)})가 포함된 회상 글이 없습니다.</div>`;
     }
 
     // ★ 회상 카드 그리드 (buildFlashbackCardGrid 재사용)
@@ -518,7 +516,7 @@ function renderProfileStoryTab(post) {
         .filter(sp => (sp.swordNumbers || []).some(n => String(n).trim() === myNum));
 
     if (storyPosts.length === 0) {
-        return `<div class="no-data">이 도검남사(번호 ${myNum})가 포함된 이벤트 스토리가 없습니다.</div>`;
+        return `<div class="no-data">이 도검남사(번호 ${escapeHtml(myNum)})가 포함된 이벤트 스토리가 없습니다.</div>`;
     }
 
     // ★ 스토리 카드 그리드 (buildStoryCardGrid 재사용)
@@ -533,16 +531,10 @@ function renderProfileStoryTab(post) {
     `;
 }
 // ---- 카드 그리드 (리스트용) ----
-function buildCardGrid(posts, containerId = 'card-grid-container') {
+function buildCardGrid(posts) {
     if (posts.length === 0) return `<div class="no-data">등록된 게시물이 없습니다.</div>`;
-    
-    // 초기에는 30개만 렌더링
-    const INITIAL_COUNT = 30;
-    const initialPosts = posts.slice(0, INITIAL_COUNT);
-    
-    let html = `<div class="card-grid" id="${containerId}">`;
-    initialPosts.forEach(post => {
-        // 기존 카드 생성 로직과 동일 (이미지 lazy loading 포함)
+    let html = `<div class="card-grid">`;
+    posts.forEach(post => {
         const imgUrl = normalizeImageUrl(post.image);
         const imageHtml = imgUrl
             ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(post.name)}" class="card-image" loading="lazy" onerror="this.outerHTML='<div class=\\'card-image\\'>이미지 로드 실패</div>'">`
@@ -557,36 +549,6 @@ function buildCardGrid(posts, containerId = 'card-grid-container') {
             </div></div>`;
     });
     html += `</div>`;
-    
-    // ★ 나머지 데이터를 추가로 그리는 함수 (스크롤 감지용)
-    setTimeout(() => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        
-        let currentIndex = INITIAL_COUNT;
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && currentIndex < posts.length) {
-                // 30개씩 추가 렌더링
-                const nextPosts = posts.slice(currentIndex, currentIndex + 30);
-                let nextHtml = '';
-                nextPosts.forEach(post => {
-                     // 동일한 카드 생성 로직 ...
-                     const imgUrl = normalizeImageUrl(post.image);
-                     const imageHtml = imgUrl ? `<img src="${escapeHtml(imgUrl)}" class="card-image" loading="lazy">` : `<div class="card-image">이미지 없음</div>`;
-                     nextHtml += `<div class="card" onclick="renderDetailView(${Number(post.id)})">${imageHtml}...</div>`;
-                });
-                container.insertAdjacentHTML('beforeend', nextHtml);
-                currentIndex += 30;
-            }
-        }, { rootMargin: '200px' }); // 바닥에서 200px 남았을 때 미리 로드
-
-        // 컨테이너 하단에 감지용 요소 추가
-        const sentinel = document.createElement('div');
-        sentinel.id = 'scroll-sentinel';
-        container.after(sentinel);
-        observer.observe(sentinel);
-    }, 100);
-
     return html;
 }
 // ==========================================

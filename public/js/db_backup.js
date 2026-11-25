@@ -63,11 +63,96 @@ async function deleteAllWikiDataFromDB() {
 }
 
 // 동기식 인터페이스 호환용 래퍼 함수 (다른 스크립트에서 getPosts() 등을 호출할 때 사용)
-function getPosts() { return dbCache.outer; }
-function getInnerPosts() { return dbCache.inner; }
-function getFlashbackPosts() { return dbCache.flashback; }
-function getStoryPosts() { return dbCache.story; }
-function getInfoPosts() { return dbCache.info; }
+// ★ 복사본을 돌려준다: 호출한 쪽이 배열을 수정(push/대입)해도 캐시가 먼저 바뀌지 않아야
+//   저장 시점에 "무엇이 바뀌었는지"를 비교해서 DB에 반영할 수 있다.
+function getPosts() { return dbCache.outer.slice(); }
+function getInnerPosts() { return dbCache.inner.slice(); }
+function getFlashbackPosts() { return dbCache.flashback.slice(); }
+function getStoryPosts() { return dbCache.story.slice(); }
+function getInfoPosts() { return dbCache.info.slice(); }
+
+// ==========================================
+// ★ 로그인 상태 / 권한 (표시용. 실제 권한은 Supabase RLS가 강제)
+//   Next.js 로그인 페이지와 같은 출처 → 같은 localStorage 세션을 공유한다.
+// ==========================================
+const wikiAuth = { role: 'guest', username: null };
+function canWrite() { return wikiAuth.role === 'editor' || wikiAuth.role === 'admin'; }
+function isAdmin() { return wikiAuth.role === 'admin'; }
+
+async function loadWikiRole() {
+    let role = 'guest', username = null;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            const { data } = await supabaseClient
+                .from('profiles').select('username, role')
+                .eq('id', session.user.id).maybeSingle();
+            role = (data && data.role) || 'member';
+            username = (data && data.username) || null;
+        }
+    } catch (e) {
+        console.error('[Auth] 권한 확인 실패:', e);
+    }
+    wikiAuth.role = role;
+    wikiAuth.username = username;
+    document.body.dataset.role = role;
+}
+
+// ==========================================
+// ★ DB 저장 (변경된 글만 upsert, 사라진 글만 delete)
+// ==========================================
+function _makeSaver(key, category) {
+    return function (nextPosts) {
+        const prev = dbCache[key];
+        const prevJson = new Map(prev.map(p => [String(p.id), JSON.stringify(p)]));
+        const nextIds = new Set(nextPosts.map(p => String(p.id)));
+        const changed = nextPosts.filter(p => prevJson.get(String(p.id)) !== JSON.stringify(p));
+        const removedIds = prev.filter(p => !nextIds.has(String(p.id))).map(p => String(p.id));
+
+        dbCache[key] = nextPosts.slice();   // 화면은 즉시 갱신
+        if (changed.length === 0 && removedIds.length === 0) return;
+        _persistChanges(category, changed, removedIds);
+    };
+}
+
+async function _persistChanges(category, changed, removedIds) {
+    if (!supabaseClient) return;
+    try {
+        if (changed.length) {
+            const rows = changed.map(post => ({
+                id: String(post.id), category, data: post, updated_at: new Date().toISOString()
+            }));
+            const { error } = await supabaseClient.from('wiki_posts').upsert(rows, { onConflict: 'id' });
+            if (error) throw error;
+        }
+        if (removedIds.length) {
+            // RLS로 거부된 삭제는 오류 없이 0행이 반환되므로 개수를 직접 확인한다.
+            const { data, error } = await supabaseClient
+                .from('wiki_posts').delete().in('id', removedIds).select('id');
+            if (error) throw error;
+            if ((data || []).length !== removedIds.length) throw new Error('삭제 권한이 없습니다.');
+        }
+    } catch (err) {
+        console.error('[DB] 저장 실패:', err);
+        alert('서버에 저장하지 못했습니다. 권한이 없거나 로그인이 만료되었을 수 있습니다.\n(' + (err.message || err) + ')');
+        await refreshAllCache();   // 서버 상태로 되돌림
+        if (typeof renderAllPostsList === 'function') renderAllPostsList(false);
+    }
+}
+
+const _savers = {
+    outer:     _makeSaver('outer', 'outer'),
+    inner:     _makeSaver('inner', 'inner'),
+    flashback: _makeSaver('flashback', 'flashback'),
+    story:     _makeSaver('story', 'story'),
+    info:      _makeSaver('info', 'info'),
+};
+// 기존(localStorage 저장) 함수들을 DB 저장으로 대체
+function savePosts(posts)          { _savers.outer(posts); }
+function saveInnerPosts(posts)     { _savers.inner(posts); }
+function saveFlashbackPosts(posts) { _savers.flashback(posts); }
+function saveStoryPosts(posts)     { _savers.story(posts); }
+function saveInfoPosts(posts)      { _savers.info(posts); }
 
 // DB에서 최신 데이터를 다시 불러와 캐시를 갱신하는 함수
 async function refreshAllCache() {
@@ -86,8 +171,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. 초기 데이터 로드 (DB 연동)
     if (supabaseClient) {
-        await refreshAllCache();
+        await Promise.all([refreshAllCache(), loadWikiRole()]);
         console.log('[DB] 모든 위키 데이터 초기 로드 완료:', dbCache);
+
+        // 다른 탭/페이지에서 로그인·로그아웃하면 권한 표시를 갱신
+        supabaseClient.auth.onAuthStateChange(() => { setTimeout(loadWikiRole, 0); });
         
         // 데이터 로드 후 화면 갱신 (다른 스크립트의 렌더링 함수 호출)
         if (typeof renderAllPostsList === 'function') renderAllPostsList(false);
@@ -252,6 +340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const jsonUpload = document.getElementById('jsonUpload');
     if (jsonUpload) {
         jsonUpload.addEventListener('change', (event) => {
+            if (!requireWriter()) { event.target.value = ''; return; }
             const files = event.target.files;
             if (files.length === 0) return;
 
@@ -382,6 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resetBtn = document.getElementById('btn-reset-all');
     if (resetBtn) {
         resetBtn.addEventListener('click', async () => {
+            if (!requireAdmin()) return;
             await refreshAllCache();
             const total = dbCache.outer.length + dbCache.inner.length + dbCache.flashback.length + dbCache.story.length + dbCache.info.length;
             
@@ -398,10 +488,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // DB 데이터 전체 삭제 처리
             await deleteAllWikiDataFromDB();
-            
+
             // 캐시 초기화 및 화면 갱신
             await refreshAllCache();
-            alert('모든 데이터가 DB에서 삭제되었습니다.');
+            const remaining = dbCache.outer.length + dbCache.inner.length + dbCache.flashback.length + dbCache.story.length + dbCache.info.length;
+            alert(remaining === 0 ? '모든 데이터가 DB에서 삭제되었습니다.' : '삭제하지 못했습니다. 관리자 권한을 확인하세요.');
             
             if (typeof currentListState !== 'undefined') {
                 if (currentListState.type === 'inner') renderInnerList('모두 보기', false);

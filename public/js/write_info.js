@@ -10,24 +10,9 @@ function saveInfoPosts(posts) {
     localStorage.setItem(INFO_STORAGE_KEY, JSON.stringify(posts));
 }
 
-// ---- 북마크 헬퍼 ----
-// write_info.js
-const INFO_BOOKMARK_KEY = BOOKMARK_KEYS.info;   // ← 상수 alias (또는 기존 키 유지)
-function toggleInfoBookmark(id) {
-    const ids = getInfoBookmarks();
-    const exists = ids.some(x => String(x) === String(id));
-    const next = exists
-        ? ids.filter(x => String(x) !== String(id))
-        : [...ids, id];
-    saveInfoBookmarks(next);
-    // 상세보기 중이면 즉시 리렌더
-    if (document.getElementById('infoBookmarkWrap')) {
-        renderInfoDetailView(id, false);
-    }
-}
-
 // ---- 글쓰기 ----
 function openInfoWriteView(post = null, isCopy = false) {
+    if (!requireWriter()) return;
     const isEdit = post !== null && !isCopy;
     const title = isEdit ? '게임 정보 수정' : (isCopy ? '게임 정보 복사' : '게임 정보 새글쓰기');
     const formHTML = renderInfoWriteFormHTML(post, isCopy);

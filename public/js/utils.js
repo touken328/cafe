@@ -65,13 +65,32 @@ const STORAGE_KEY = 'wikiPosts';
 const CURRENT_VERSION = 2;
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === undefined || text === null || text === false) return '';
     return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+// ★ onclick="fn(${jsArg(값)})" 처럼 쓰는 안전한 JS 인자 변환기.
+//   JSON.stringify 로 JS 문자열 리터럴을 만들고 escapeHtml 로 HTML 속성 안에서도 안전하게 만든다.
+//   (브라우저가 속성의 HTML 엔티티를 먼저 해석하므로, 따옴표 이스케이프를 직접 하는 방식은 뚫릴 수 있음)
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(value === undefined || value === null ? '' : value));
+}
+
+// ★ 화면 표시용 권한 확인 (실제 권한은 Supabase RLS가 강제한다)
+function requireWriter() {
+    if (typeof canWrite === 'function' && canWrite()) return true;
+    alert('편집 권한이 필요합니다. 로그인 후 편집 권한을 받은 계정만 글을 쓰거나 수정할 수 있습니다.');
+    return false;
+}
+function requireAdmin() {
+    if (typeof isAdmin === 'function' && isAdmin()) return true;
+    alert('관리자 권한이 필요합니다.');
+    return false;
 }
 
 // ★ 마이그레이션 파이프라인 (버전별 데이터 변환)
@@ -144,14 +163,14 @@ function renderMarkdown(text) {
             const sanitized = DOMPurify.sanitize(rawHtml, {
                 ADD_ATTR: ['target', 'rel'],   // ★ rel도 허용 (noopener noreferrer)
                 FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed'],
-                FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+                FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'style']
             });
             // ★ sanitize 이후에 target/rel 부여 (sanitize가 지우지 않도록 순서 중요)
             return applyExternalLinkTarget(sanitized);
         }
         // DOMPurify가 로드되지 않은 경우 폴백 (위험! 가급적 로드 필수)
         console.warn('[renderMarkdown] DOMPurify가 로드되지 않았습니다.');
-        return applyExternalLinkTarget(rawHtml);
+        return escapeHtml(text);   // ★ DOMPurify 없이는 절대 HTML을 그대로 쓰지 않는다
     } 
     catch (e) { return escapeHtml(text); }
 }

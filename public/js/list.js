@@ -407,7 +407,7 @@ function renderTagPostList(tag, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="tag-search-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2>태그: <span style="color:var(--color-delete);">${tag}</span> (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2>태그: <span style="color:var(--color-delete);">${escapeHtml(tag)}</span> (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getSortDropdownHTML()}
                 <button class="back-btn" id="btn-tag-back">← 뒤로</button>
@@ -441,11 +441,11 @@ function renderDetailView(postId, pushHistory = true) {
     const nextPost = currentIdx < allSorted.length - 1 ? allSorted[currentIdx + 1] : null;
 
     const prevBtnHtml = prevPost
-        ? `<button class="btn-nav-prev" onclick="renderDetailView(${prevPost.id})">◀ 이전 (${prevPost.number}.${prevPost.name || ''})</button>`
+        ? `<button class="btn-nav-prev" onclick="renderDetailView(${jsArg(prevPost.id)})">◀ 이전 (${escapeHtml(prevPost.number)}.${escapeHtml(prevPost.name || '')})</button>`
         : `<button disabled class="btn-nav-disabled">◀ 이전</button>`;
 
     const nextBtnHtml = nextPost
-        ? `<button class="btn-nav-next" onclick="renderDetailView(${nextPost.id})">다음 (${nextPost.number}.${nextPost.name || ''}) ▶</button>`
+        ? `<button class="btn-nav-next" onclick="renderDetailView(${jsArg(nextPost.id)})">다음 (${escapeHtml(nextPost.number)}.${escapeHtml(nextPost.name || '')}) ▶</button>`
         : `<button disabled class="btn-nav-disabled">다음 ▶</button>`;
 
     if (pushHistory) {
@@ -461,11 +461,11 @@ function renderDetailView(postId, pushHistory = true) {
     const statusTag = post.status || '';
     const extraTags = (post.tags || []).filter(t => t !== dojongTag && t !== dopaTag && t !== statusTag);
     let tagsHtml = '';
-const safeTag = (v) => escapeHtml(String(v)).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-if (dojongTag) tagsHtml += `<span class="tag tag-yellow" onclick="renderTagPostList('${safeTag(dojongTag)}')">${escapeHtml(dojongTag)}</span>`;
-if (dopaTag) tagsHtml += `<span class="tag tag-blue" onclick="renderTagPostList('${safeTag(dopaTag)}')">${escapeHtml(dopaTag)}</span>`;
-if (statusTag) tagsHtml += `<span class="tag tag-green" onclick="renderTagPostList('${safeTag(statusTag)}')">${escapeHtml(statusTag)}</span>`;
-extraTags.forEach(t => { tagsHtml += `<span class="tag tag-gray" onclick="renderTagPostList('${safeTag(t)}')">${escapeHtml(t)}</span>`; });
+const safeTag = (v) => jsArg(String(v));
+if (dojongTag) tagsHtml += `<span class="tag tag-yellow" onclick="renderTagPostList(${safeTag(dojongTag)})">${escapeHtml(dojongTag)}</span>`;
+if (dopaTag) tagsHtml += `<span class="tag tag-blue" onclick="renderTagPostList(${safeTag(dopaTag)})">${escapeHtml(dopaTag)}</span>`;
+if (statusTag) tagsHtml += `<span class="tag tag-green" onclick="renderTagPostList(${safeTag(statusTag)})">${escapeHtml(statusTag)}</span>`;
+extraTags.forEach(t => { tagsHtml += `<span class="tag tag-gray" onclick="renderTagPostList(${safeTag(t)})">${escapeHtml(t)}</span>`; });
 
     const tabsHtml = renderTabsNavHTML(post);
 	const isBm = isOuterBookmarked(post.id);
@@ -498,10 +498,10 @@ extraTags.forEach(t => { tagsHtml += `<span class="tag tag-gray" onclick="render
                 
                 <!-- ★ 우측 그룹 -->
                 <div class="detail-actions-right">
-                    <button class="btn-txt" onclick="downloadTxt(${post.id})">txt다운</button>
+                    <button class="btn-txt" onclick="downloadTxt(${jsArg(post.id)})">txt다운</button>
                     <button class="btn-edit" onclick="editPostById(${Number(post.id)})">수정</button>
-                    <button class="btn-none" onclick="copyPostById(${Number(post.id)})">복제</button>
-                    <button class="btn-delete" onclick="deletePost(${post.id})">삭제</button>
+                    <button class="btn-none btn-copy" onclick="copyPostById(${Number(post.id)})">복제</button>
+                    <button class="btn-delete" onclick="deletePost(${jsArg(post.id)})">삭제</button>
                 </div>
             </div>
         </div>
@@ -590,6 +590,7 @@ function downloadTxt(postId) {
 
 // ---- 삭제 ----
 function deletePost(postId) {
+    if (!requireAdmin()) return;
     if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) return;
     savePosts(getPosts().filter(p => String(p.id) !== String(postId)));
     alert('삭제되었습니다.');
@@ -624,7 +625,7 @@ function renderInnerList(type, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getInnerSortDropdownHTML()}
                 <button class="btn-bmk" id="btn-inner-bookmark-only">★ 북마크만</button>
@@ -679,7 +680,7 @@ function renderFlashbackList(rangeOrValue, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getFlashbackSortDropdownHTML()}
                 <button class="btn-bmk" id="btn-flashback-bookmark-only">★ 북마크만</button>
@@ -721,7 +722,7 @@ function renderFlashbackRegionList(region, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getFlashbackSortDropdownHTML()}
                 <button class="btn-bmk" id="btn-flashback-bookmark-only">★ 북마크만</button>
@@ -778,7 +779,7 @@ function renderFlashbackRegion(mapValue, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getFlashbackSortDropdownHTML()}
                 <button class="btn-bmk" id="btn-flashback-bookmark-only">★ 북마크만</button>
@@ -821,7 +822,7 @@ function renderStoryList(filterValue, pushHistory = true, page = 1) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getStorySortDropdownHTML()}
                 <button class="btn-bmk" id="btn-story-bookmark-only">★ 북마크만</button>
@@ -858,11 +859,11 @@ function renderStoryDetailView(postId, pushHistory = true) {
     const nextPost = currentIdx < allSorted.length - 1 ? allSorted[currentIdx + 1] : null;
 
     const prevBtnHtml = prevPost
-        ? `<button class="btn-nav-prev" onclick="renderStoryDetailView(${prevPost.id})">◀ 이전 (${escapeHtml(prevPost.mainCategory)} : ${escapeHtml(prevPost.title || '제목 없음')})</button>`
+        ? `<button class="btn-nav-prev" onclick="renderStoryDetailView(${jsArg(prevPost.id)})">◀ 이전 (${escapeHtml(prevPost.mainCategory)} : ${escapeHtml(prevPost.title || '제목 없음')})</button>`
         : `<button disabled class="btn-nav-disabled">◀ 이전</button>`;
 
     const nextBtnHtml = nextPost
-        ? `<button class="btn-nav-next" onclick="renderStoryDetailView(${nextPost.id})">다음 (${escapeHtml(nextPost.mainCategory)} : ${escapeHtml(nextPost.title || '제목 없음')}) ▶</button>`
+        ? `<button class="btn-nav-next" onclick="renderStoryDetailView(${jsArg(nextPost.id)})">다음 (${escapeHtml(nextPost.mainCategory)} : ${escapeHtml(nextPost.title || '제목 없음')}) ▶</button>`
         : `<button disabled class="btn-nav-disabled">다음 ▶</button>`;
 
     if (pushHistory) {
@@ -870,13 +871,13 @@ function renderStoryDetailView(postId, pushHistory = true) {
     }
 
     // 태그 뱃지: 대분류(노랑), 입력 태그(회색)
-    const safeTag = (v) => escapeHtml(String(v)).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeTag = (v) => jsArg(String(v));
     let tagsHtml = '';
     if (post.mainCategory) {
-        tagsHtml += `<span class="tag tag-yellow" onclick="renderStoryList('${safeTag(post.mainCategory)}')">${escapeHtml(post.mainCategory)}</span>`;
+        tagsHtml += `<span class="tag tag-yellow" onclick="renderStoryList(${safeTag(post.mainCategory)})">${escapeHtml(post.mainCategory)}</span>`;
     }
     (post.tags || []).forEach(t => {
-        tagsHtml += `<span class="tag tag-gray" onclick="renderStoryTagList('${safeTag(t)}')">${escapeHtml(t)}</span>`;
+        tagsHtml += `<span class="tag tag-gray" onclick="renderStoryTagList(${safeTag(t)})">${escapeHtml(t)}</span>`;
     });
 	
 	const isBm = isStoryBookmarked(post.id);
@@ -903,7 +904,7 @@ function renderStoryDetailView(postId, pushHistory = true) {
 			  <div class="detail-actions-right">
                 <button class="btn-txt" onclick="downloadStoryTxt(${Number(post.id)})">txt다운</button>
                 <button class="btn-edit" onclick="openStoryWriteViewById(${Number(post.id)})">수정</button>
-                <button class="btn-none" onclick="copyStoryPostById(${Number(post.id)})">복제</button>
+                <button class="btn-none btn-copy" onclick="copyStoryPostById(${Number(post.id)})">복제</button>
                 <button class="btn-delete" onclick="deleteStoryPost(${Number(post.id)})">삭제</button>
 			  </div>
             </div>
@@ -991,6 +992,7 @@ ${post.content || ''}
 // ★ 스토리 삭제
 // ==========================================
 function deleteStoryPost(postId) {
+    if (!requireAdmin()) return;
     if (!confirm('정말로 이 스토리를 삭제하시겠습니까?')) return;
     const posts = getStoryPosts().filter(p => String(p.id) !== String(postId));
     saveStoryPosts(posts);
@@ -1013,11 +1015,11 @@ function renderInnerDetailView(postId, pushHistory = true) {
     let tagsHtml = '';
     // 내번타입 → 노란색 태그
     if (post.innerType) {
-        tagsHtml += `<span class="tag tag-yellow" onclick="renderInnerList('${post.innerType}')">${post.innerType}</span>`;
+        tagsHtml += `<span class="tag tag-yellow" onclick="renderInnerList(${jsArg(post.innerType)})">${escapeHtml(post.innerType)}</span>`;
     }
     // 입력 태그 → 회색 태그
     (post.tags || []).forEach(t => {
-        tagsHtml += `<span class="tag tag-gray" onclick="renderInnerTagList('${t}')">${t}</span>`;
+        tagsHtml += `<span class="tag tag-gray" onclick="renderInnerTagList(${jsArg(t)})">${escapeHtml(t)}</span>`;
     });
 
 	const isBm = isInnerBookmarked(post.id);
@@ -1037,10 +1039,10 @@ function renderInnerDetailView(postId, pushHistory = true) {
                 <button id="btn-inner-detail-back" class="btn-none">목록 보기</button>
 			  </div>
 			  <div class="detail-actions-right">
-                <button class="btn-txt" onclick="downloadInnerTxt(${post.id})">txt다운</button>
-                <button class="btn-edit" onclick='openInnerWriteView(${JSON.stringify(post).replace(/'/g, "&#39;")})'>수정</button>
-                <button class="btn-none" onclick='copyInnerPost(${JSON.stringify(post).replace(/'/g, "&#39;")})'>복제</button>
-                <button class="btn-delete" onclick="deleteInnerPost(${post.id})">삭제</button>
+                <button class="btn-txt" onclick="downloadInnerTxt(${jsArg(post.id)})">txt다운</button>
+                <button class="btn-edit" onclick="openInnerWriteViewById(${jsArg(post.id)})">수정</button>
+                <button class="btn-none btn-copy" onclick="copyInnerPostById(${jsArg(post.id)})">복제</button>
+                <button class="btn-delete" onclick="deleteInnerPost(${jsArg(post.id)})">삭제</button>
 			  </div>
             </div>
         </div>
@@ -1062,7 +1064,7 @@ function renderInnerSwordList(num) {
     const filtered = posts.filter(p => (p.swordNumbers || []).some(n => String(n) === String(num)));
     mainContent.innerHTML = `<div class="list-container">
         <div class="tag-search-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2>도검 번호: <span style="color:var(--color-delete);">${num}</span> (${filtered.length}개)</h2>
+            <h2>도검 번호: <span style="color:var(--color-delete);">${escapeHtml(num)}</span> (${filtered.length}개)</h2>
             <button class="back-btn" onclick="renderInnerList('모두 보기')">← 뒤로</button>
         </div>
         ${buildInnerCardGrid(filtered)}
@@ -1079,7 +1081,7 @@ function renderInnerTagList(tag) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="tag-search-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2>내번 태그: <span style="color:var(--color-delete);">${tag}</span> (${filtered.length}개)</h2>
+            <h2>내번 태그: <span style="color:var(--color-delete);">${escapeHtml(tag)}</span> (${filtered.length}개)</h2>
             <button class="back-btn" onclick="renderInnerList('모두 보기')">← 뒤로</button>
         </div>
         ${buildInnerCardGrid(filtered)}
@@ -1124,6 +1126,7 @@ ${post.mutualLines || ''}
 // ★ 내번 삭제
 // ==========================================
 function deleteInnerPost(postId) {
+    if (!requireAdmin()) return;
     if (!confirm('정말로 이 내번을 삭제하시겠습니까?')) return;
     const posts = getInnerPosts().filter(p => String(p.id) !== String(postId));
     saveInnerPosts(posts);
@@ -1149,11 +1152,11 @@ function renderFlashbackDetailView(postId, pushHistory = true) {
     const nextPost = currentIdx < allSorted.length - 1 ? allSorted[currentIdx + 1] : null;
 
     const prevBtnHtml = prevPost
-        ? `<button class="btn-nav-prev" onclick="renderFlashbackDetailView(${prevPost.id})">◀ 이전 (${prevPost.flashbackNumber || '?'}. ${prevPost.flashbackTitle})</button>`
+        ? `<button class="btn-nav-prev" onclick="renderFlashbackDetailView(${jsArg(prevPost.id)})">◀ 이전 (${escapeHtml(prevPost.flashbackNumber || '?')}. ${escapeHtml(prevPost.flashbackTitle || '')})</button>`
         : `<button disabled class="btn-nav-disabled">◀ 이전</button>`;
 
     const nextBtnHtml = nextPost
-        ? `<button class="btn-nav-next" onclick="renderFlashbackDetailView(${nextPost.id})">다음 (${nextPost.flashbackNumber || '?'}. ${nextPost.flashbackTitle}) ▶</button>`
+        ? `<button class="btn-nav-next" onclick="renderFlashbackDetailView(${jsArg(nextPost.id)})">다음 (${escapeHtml(nextPost.flashbackNumber || '?')}. ${escapeHtml(nextPost.flashbackTitle || '')}) ▶</button>`
         : `<button disabled class="btn-nav-disabled">다음 ▶</button>`;
 
     if (pushHistory) {
@@ -1163,10 +1166,10 @@ function renderFlashbackDetailView(postId, pushHistory = true) {
 // 태그 뱃지
 let tagsHtml = '';
     if (post.flashbackRegion) {
-        tagsHtml += `<span class="tag tag-yellow" onclick="renderFlashbackRegionList('${post.flashbackRegion}')">${post.flashbackRegion}</span>`;   // ★ 변경
+        tagsHtml += `<span class="tag tag-yellow" onclick="renderFlashbackRegionList(${jsArg(post.flashbackRegion)})">${escapeHtml(post.flashbackRegion)}</span>`;   // ★ 변경
     }
     (post.tags || []).forEach(t => {
-        tagsHtml += `<span class="tag tag-gray" onclick="renderFlashbackTagList('${t}')">${t}</span>`;
+        tagsHtml += `<span class="tag tag-gray" onclick="renderFlashbackTagList(${jsArg(t)})">${escapeHtml(t)}</span>`;
     });
 
 	const isBm = isFlashbackBookmarked(post.id);
@@ -1192,10 +1195,10 @@ let tagsHtml = '';
                 <button id="btn-flashback-detail-all" class="btn-none">목록 보기</button>
 			  </div>
 			  <div class="detail-actions-right">
-                <button class="btn-txt" onclick="downloadFlashbackTxt(${post.id})">txt다운</button>
-                <button class="btn-edit" onclick='openFlashbackWriteView(${JSON.stringify(post).replace(/'/g, "&#39;")})'>수정</button>
-                <button class="btn-none" onclick='copyFlashbackPost(${JSON.stringify(post).replace(/'/g, "&#39;")})'>복제</button>
-                <button class="btn-delete" onclick="deleteFlashbackPost(${post.id})">삭제</button>
+                <button class="btn-txt" onclick="downloadFlashbackTxt(${jsArg(post.id)})">txt다운</button>
+                <button class="btn-edit" onclick="openFlashbackWriteViewById(${jsArg(post.id)})">수정</button>
+                <button class="btn-none btn-copy" onclick="copyFlashbackPostById(${jsArg(post.id)})">복제</button>
+                <button class="btn-delete" onclick="deleteFlashbackPost(${jsArg(post.id)})">삭제</button>
 			  </div>
             </div>
         </div>
@@ -1214,7 +1217,7 @@ function renderFlashbackSwordList(num) {
     const sorted = sortFlashbackPosts(filtered, currentFlashbackSortType);
     mainContent.innerHTML = `<div class="list-container">
         <div class="tag-search-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2>도검 번호: <span style="color:var(--color-delete);">${num}</span> (${filtered.length}개)</h2>
+            <h2>도검 번호: <span style="color:var(--color-delete);">${escapeHtml(num)}</span> (${filtered.length}개)</h2>
             <button class="back-btn" onclick="renderFlashbackList('모두 보기')">← 뒤로</button>
         </div>
         ${buildFlashbackCardGrid(filtered)}
@@ -1232,7 +1235,7 @@ function renderFlashbackTagList(tag) {
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="tag-search-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2>회상 태그: <span style="color:var(--color-delete);">${tag}</span> (${filtered.length}개)</h2>
+            <h2>회상 태그: <span style="color:var(--color-delete);">${escapeHtml(tag)}</span> (${filtered.length}개)</h2>
             <button class="back-btn" onclick="renderFlashbackList('모두 보기')">← 뒤로</button>
         </div>
         ${buildFlashbackCardGrid(filtered)}
@@ -1278,6 +1281,7 @@ ${post.flashbackLines || ''}
 // ★ 회상 삭제
 // ==========================================
 function deleteFlashbackPost(postId) {
+    if (!requireAdmin()) return;
     if (!confirm('정말로 이 회상을 삭제하시겠습니까?')) return;
     const posts = getFlashbackPosts().filter(p => String(p.id) !== String(postId));
     saveFlashbackPosts(posts);
@@ -1415,7 +1419,7 @@ function _renderOuterList({ posts, title, historyType, historyValue, filterValue
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${realTitle} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(realTitle)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getSortDropdownHTML()}
                 <button class="btn-bmk" id="btn-outer-bookmark-only">★ 북마크만</button>
@@ -1478,7 +1482,7 @@ function renderInfoList(filterValue = '모두 보기', pushHistory = true, page 
 
     mainContent.innerHTML = `<div class="list-container">
         <div class="list-display">
-            <h2 class="h2">${title} (${sorted.length}개) - ${page}/${totalPages}</h2>
+            <h2 class="h2">${escapeHtml(title)} (${sorted.length}개) - ${page}/${totalPages}</h2>
             <div style="display:flex;gap:10px;align-items:center;">
                 ${getInfoSortDropdownHTML()} <!-- ★ 추가 -->
                 <button class="btn-bmk" id="btn-info-bookmark-only">★ 북마크만</button>
@@ -1513,10 +1517,10 @@ function renderInfoDetailView(postId, pushHistory = true) {
     const nextPost = idx < allSorted.length - 1 ? allSorted[idx + 1] : null;
 
     const prevBtnHtml = prevPost
-        ? `<button class="btn-nav-prev" onclick="renderInfoDetailView(${prevPost.id})">◀ 이전 (${escapeHtml(prevPost.title || '제목 없음')})</button>`
+        ? `<button class="btn-nav-prev" onclick="renderInfoDetailView(${jsArg(prevPost.id)})">◀ 이전 (${escapeHtml(prevPost.title || '제목 없음')})</button>`
         : `<button disabled class="btn-nav-disabled">◀ 이전</button>`;
     const nextBtnHtml = nextPost
-        ? `<button class="btn-nav-next" onclick="renderInfoDetailView(${nextPost.id})">다음 (${escapeHtml(nextPost.title || '제목 없음')}) ▶</button>`
+        ? `<button class="btn-nav-next" onclick="renderInfoDetailView(${jsArg(nextPost.id)})">다음 (${escapeHtml(nextPost.title || '제목 없음')}) ▶</button>`
         : `<button disabled class="btn-nav-disabled">다음 ▶</button>`;
 
     if (pushHistory) {
@@ -1524,14 +1528,14 @@ function renderInfoDetailView(postId, pushHistory = true) {
     }
 
     // 태그 뱃지: 분류(노랑) + 태그(회색)
-    const safeTag = (v) => escapeHtml(String(v)).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeTag = (v) => jsArg(String(v));
     let tagsHtml = '';
 	const isBm = isInfoBookmarked(post.id);
     if (post.mainCategory) {
-        tagsHtml += `<span class="tag tag-yellow" onclick="renderInfoList('${safeTag(post.mainCategory)}')">${escapeHtml(post.mainCategory)}</span>`;
+        tagsHtml += `<span class="tag tag-yellow" onclick="renderInfoList(${safeTag(post.mainCategory)})">${escapeHtml(post.mainCategory)}</span>`;
     }
     (post.tags || []).forEach(t => {
-        tagsHtml += `<span class="tag tag-gray" onclick="renderInfoTagList('${safeTag(t)}')">${escapeHtml(t)}</span>`;
+        tagsHtml += `<span class="tag tag-gray" onclick="renderInfoTagList(${safeTag(t)})">${escapeHtml(t)}</span>`;
     });
 
     mainContent.innerHTML = `
@@ -1551,7 +1555,7 @@ function renderInfoDetailView(postId, pushHistory = true) {
                 <button id="btn-info-detail-all" class="btn-none">목록 보기</button>
 			  </div>
 			  <div class="detail-actions-right">
-                <button class="btn-none" onclick="copyInfoPostById(${Number(post.id)})">복제</button>
+                <button class="btn-none btn-copy" onclick="copyInfoPostById(${Number(post.id)})">복제</button>
                 <button class="btn-edit" onclick="openInfoWriteViewById(${Number(post.id)})">수정</button>
                 <button class="btn-delete" onclick="deleteInfoPost(${Number(post.id)})">삭제</button>
 			  </div>
@@ -1588,11 +1592,12 @@ function renderInfoTagList(tag) {
 }
 
 function deleteInfoPost(postId) {
+    if (!requireAdmin()) return;
     if (!confirm('정말로 이 게임 정보를 삭제하시겠습니까?')) return;
     const posts = getInfoPosts().filter(p => String(p.id) !== String(postId));
     saveInfoPosts(posts);
     // 북마크에서도 제거
-    saveInfoBookmarks(getInfoBookmarks().filter(id => String(id) !== String(postId)));
+    _saveBookmarks(BOOKMARK_KEYS.info, _getBookmarks(BOOKMARK_KEYS.info).filter(id => String(id) !== String(postId)));
     alert('삭제되었습니다.');
     renderInfoList('모두 보기');
 }
@@ -1650,4 +1655,24 @@ function renderTextvsView(pushHistory = true) {
     `;
 
     document.getElementById('btn-textvs-back').addEventListener('click', () => history.back());
+}
+
+// ==========================================
+// ★ 내번/회상 수정·복제 (id 기반: 글 전체를 HTML 속성에 넣지 않는다)
+// ==========================================
+function openInnerWriteViewById(id) {
+    const p = getInnerPosts().find(x => String(x.id) === String(id));
+    if (p) openInnerWriteView(p);
+}
+function copyInnerPostById(id) {
+    const p = getInnerPosts().find(x => String(x.id) === String(id));
+    if (p) openInnerWriteView(p, true);
+}
+function openFlashbackWriteViewById(id) {
+    const p = getFlashbackPosts().find(x => String(x.id) === String(id));
+    if (p) openFlashbackWriteView(p);
+}
+function copyFlashbackPostById(id) {
+    const p = getFlashbackPosts().find(x => String(x.id) === String(id));
+    if (p) openFlashbackWriteView(p, true);
 }

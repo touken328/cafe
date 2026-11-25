@@ -31,6 +31,7 @@ function saveFlashbackPosts(posts) {
 
 // 회상 글쓰기/수정/복사 화면
 function openFlashbackWriteView(post = null, isCopy = false) {
+    if (!requireWriter()) return;
     const isEdit = post !== null && !isCopy;
     const title = isEdit ? '회상 수정' : (isCopy ? '회상 복사' : '회상 새글쓰기');
     const formHTML = renderFlashbackWriteFormHTML(post, isCopy);
@@ -111,6 +112,7 @@ function saveInnerPosts(posts) {
 
 // 내번 글쓰기/수정/복사 화면
 function openInnerWriteView(post = null, isCopy = false) {
+    if (!requireWriter()) return;
     const isEdit = post !== null && !isCopy;
     const title = isEdit ? '내번 수정' : (isCopy ? '내번 복사' : '내번 새글쓰기');
 
