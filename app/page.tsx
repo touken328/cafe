@@ -37,7 +37,7 @@ async function UserProfile() {
           {username} 님
         </p>
       </div>
-      <form action="/auth/signout" method="POST">
+      <form action="/signout" method="POST">
         <button
           type="submit"
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
