@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
@@ -20,98 +20,110 @@ export default function LoginPage() {
 
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode)
-    setError(null)
+    setErrorMsg(null)
     setMessage(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setErrorMsg(null)
     setMessage(null)
     setLoading(true)
 
     try {
       if (mode === 'login') {
+        const cleanUsername = username.trim()
+
         // 1. 영문 ID로 profiles 테이블에서 매핑된 이메일 조회
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileQueryErr } = await supabase
           .from('profiles')
           .select('email')
-          .eq('username', username.trim())
-          .single()
+          .eq('username', cleanUsername)
+          .maybeSingle()
 
-        if (profileError || !profile) {
+        if (profileQueryErr) throw profileQueryErr
+        if (!profile) {
           throw new Error('존재하지 않는 영문 아이디입니다.')
         }
 
         // 2. 조회된 이메일과 비밀번호로 로그인
-        const { error: loginError } = await supabase.auth.signInWithPassword({
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
           email: profile.email,
           password,
         })
-        if (loginError) throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.')
+        if (loginErr) throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.')
 
         router.push('/')
         router.refresh()
 
       } else if (mode === 'signup') {
-// 3. profiles 테이블에 영문 ID와 이메일 저장 (이미 트리거로 생성된 행이 있으면 업데이트)
-        if (authData.user) {
-          const { error: profileError } = await supabase.from('profiles').upsert({
-            id: authData.user.id,
-            username: cleanUsername,
-            email: email.trim(),
-          })
-          if (profileError) throw profileError
+        const cleanUsername = username.trim()
+        const cleanEmail = email.trim()
+
+        // 1. 영문 ID 중복 확인
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', cleanUsername)
+          .maybeSingle()
+
+        if (existingUser) {
+          throw new Error('이미 사용 중인 영문 아이디입니다.')
         }
 
         // 2. Supabase Auth 계정 생성
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: email.trim(),
+        const { data: authData, error: signUpErr } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         })
-        if (authError) throw authError
+        if (signUpErr) throw signUpErr
 
-        // 3. profiles 테이블에 영문 ID와 이메일 저장
+        // 3. profiles 테이블에 영문 ID와 이메일 저장 (upsert로 충돌 방지)
         if (authData.user) {
-          const { error: profileError } = await supabase.from('profiles').insert({
+          const { error: upsertErr } = await supabase.from('profiles').upsert({
             id: authData.user.id,
             username: cleanUsername,
-            email: email.trim(),
+            email: cleanEmail,
           })
-          if (profileError) throw profileError
+          if (upsertErr) throw upsertErr
         }
 
         setMessage('회원가입이 완료되었습니다! 이제 영문 ID로 로그인할 수 있습니다.')
         setMode('login')
 
       } else if (mode === 'find-id') {
+        const cleanEmail = email.trim()
+
         // 이메일로 영문 ID 조회
-        const { data: profile, error: findError } = await supabase
+        const { data: profile, error: findErr } = await supabase
           .from('profiles')
           .select('username')
-          .eq('email', email.trim())
-          .single()
+          .eq('email', cleanEmail)
+          .maybeSingle()
 
-        if (findError || !profile) {
+        if (findErr) throw findErr
+        if (!profile) {
           throw new Error('해당 이메일로 가입된 아이디를 찾을 수 없습니다.')
         }
 
         setMessage(`가입하신 영문 아이디는 [ ${profile.username} ] 입니다.`)
 
       } else if (mode === 'forgot-pw') {
+        const cleanEmail = email.trim()
+
         // 이메일로 비밀번호 재설정 링크 발송
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
         })
-        if (resetError) throw resetError
+        if (resetErr) throw resetErr
 
         setMessage('입력하신 이메일로 비밀번호 재설정 링크를 보냈습니다. 메일함을 확인해 주세요.')
       }
     } catch (err: any) {
-      setError(err.message || '요청 처리 중 오류가 발생했습니다.')
+      setErrorMsg(err?.message || '요청 처리 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -135,9 +147,9 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {error && (
+        {errorMsg && (
           <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-            {error}
+            {errorMsg}
           </div>
         )}
         {message && (
@@ -147,7 +159,6 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 영문 ID 입력칸: 로그인, 회원가입 시 표시 */}
           {(mode === 'login' || mode === 'signup') && (
             <div>
               <label className="block text-sm font-medium text-gray-700">영문 아이디</label>
@@ -155,14 +166,13 @@ export default function LoginPage() {
                 type="text"
                 required
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(ev) => setUsername(ev.target.value)}
                 placeholder="예: touken328"
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
-          {/* 이메일 입력칸: 회원가입, 아이디 찾기, 비밀번호 찾기 시 표시 */}
           {mode !== 'login' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">이메일</label>
@@ -170,14 +180,13 @@ export default function LoginPage() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(ev) => setEmail(ev.target.value)}
                 placeholder="example@email.com"
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
-          {/* 비밀번호 입력칸: 로그인, 회원가입 시 표시 */}
           {(mode === 'login' || mode === 'signup') && (
             <div>
               <label className="block text-sm font-medium text-gray-700">비밀번호</label>
@@ -186,7 +195,7 @@ export default function LoginPage() {
                 required
                 minLength={6}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(ev) => setPassword(ev.target.value)}
                 placeholder="6자 이상 입력"
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -210,7 +219,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* 하단 모드 전환 버튼 */}
         <div className="flex flex-col space-y-2 text-center text-sm text-gray-600 pt-3 border-t">
           {mode === 'login' ? (
             <>
